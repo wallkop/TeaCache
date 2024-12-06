@@ -48,7 +48,7 @@
 
 <div class="is-size-5 publication-authors", align="center">
     <a href="https://arxiv.org/abs/2411.19108">Paper</a> | 
-    <a href="https://github.com/LiewFeng/TeaCache/">Project Page</a>
+    <a href="https://liewfeng.github.io/TeaCache/">Project Page</a>
 </div>
 
 ![visualization](./assets/tisser.png)
