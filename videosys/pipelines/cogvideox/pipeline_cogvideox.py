@@ -13,6 +13,7 @@ import math
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import torch
+import torch.distributed as dist
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.video_processor import VideoProcessor
@@ -26,19 +27,17 @@ from videosys.models.transformers.cogvideox_transformer_3d import CogVideoXTrans
 from videosys.schedulers.scheduling_ddim_cogvideox import CogVideoXDDIMScheduler
 from videosys.schedulers.scheduling_dpm_cogvideox import CogVideoXDPMScheduler
 from videosys.utils.logging import logger
-from videosys.utils.utils import save_video
+from videosys.utils.utils import save_video, set_seed
 
 
 class CogVideoXPABConfig(PABConfig):
     def __init__(
         self,
-        steps: int = 50,
         spatial_broadcast: bool = True,
         spatial_threshold: list = [100, 850],
         spatial_range: int = 2,
     ):
         super().__init__(
-            steps=steps,
             spatial_broadcast=spatial_broadcast,
             spatial_threshold=spatial_threshold,
             spatial_range=spatial_range,
@@ -114,7 +113,7 @@ class CogVideoXConfig:
 
 
 class CogVideoXPipeline(VideoSysPipeline):
-    _optional_components = ["text_encoder", "tokenizer"]
+    _optional_components = ["tokenizer", "text_encoder", "vae", "transformer", "scheduler"]
     model_cpu_offload_seq = "text_encoder->transformer->vae"
     _callback_tensor_inputs = [
         "latents",
@@ -158,9 +157,6 @@ class CogVideoXPipeline(VideoSysPipeline):
                 subfolder="scheduler",
             )
 
-        # set eval and device
-        self.set_eval_and_device(self._device, vae, transformer)
-
         self.register_modules(
             tokenizer=tokenizer, text_encoder=text_encoder, vae=vae, transformer=transformer, scheduler=scheduler
         )
@@ -169,7 +165,7 @@ class CogVideoXPipeline(VideoSysPipeline):
         if config.cpu_offload:
             self.enable_model_cpu_offload()
         else:
-            self.set_eval_and_device(self._device, text_encoder)
+            self.set_eval_and_device(self._device, text_encoder, vae, transformer)
 
         # vae tiling
         if config.vae_tiling:
@@ -186,6 +182,31 @@ class CogVideoXPipeline(VideoSysPipeline):
             self.vae.config.temporal_compression_ratio if hasattr(self, "vae") and self.vae is not None else 4
         )
         self.video_processor = VideoProcessor(vae_scale_factor=self.vae_scale_factor_spatial)
+
+        # parallel
+        self._set_parallel()
+
+    def _set_seed(self, seed):
+        if dist.get_world_size() == 1:
+            set_seed(seed)
+        else:
+            set_seed(seed, self.transformer.parallel_manager.dp_rank)
+
+    def _set_parallel(
+        self, dp_size: Optional[int] = None, sp_size: Optional[int] = None, enable_cp: Optional[bool] = False
+    ):
+        # init sequence parallel
+        if sp_size is None:
+            sp_size = dist.get_world_size()
+            dp_size = 1
+        else:
+            assert (
+                dist.get_world_size() % sp_size == 0
+            ), f"world_size {dist.get_world_size()} must be divisible by sp_size"
+            dp_size = dist.get_world_size() // sp_size
+
+        # transformer parallel
+        self.transformer.enable_parallel(dp_size, sp_size, enable_cp)
 
     def _get_t5_prompt_embeds(
         self,
@@ -474,6 +495,7 @@ class CogVideoXPipeline(VideoSysPipeline):
         num_frames: int = 49,
         num_inference_steps: int = 50,
         timesteps: Optional[List[int]] = None,
+        seed: int = -1,
         guidance_scale: float = 6,
         use_dynamic_cfg: bool = False,
         num_videos_per_prompt: int = 1,
@@ -489,7 +511,6 @@ class CogVideoXPipeline(VideoSysPipeline):
         ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         max_sequence_length: int = 226,
-        verbose=True,
     ) -> Union[VideoSysPipelineOutput, Tuple]:
         """
         Function invoked when calling the pipeline for generation.
@@ -572,6 +593,7 @@ class CogVideoXPipeline(VideoSysPipeline):
                 "The number of frames must be less than 49 for now due to static positional embeddings. This will be updated in the future to remove this limitation."
             )
         update_steps(num_inference_steps)
+        self._set_seed(seed)
 
         if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
             callback_on_step_end_tensor_inputs = callback_on_step_end.tensor_inputs
@@ -653,11 +675,10 @@ class CogVideoXPipeline(VideoSysPipeline):
         # 8. Denoising loop
         num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
 
-        progress_wrap = tqdm.tqdm if verbose and dist.get_rank() == 0 else (lambda x: x)
-        # with self.progress_bar(total=num_inference_steps) as progress_bar:
+        with self.progress_bar(total=num_inference_steps) as progress_bar:
             # for DPM-solver++
-        old_pred_original_sample = None
-        for i, t in progress_wrap(list(enumerate(timesteps))):
+            old_pred_original_sample = None
+            for i, t in enumerate(timesteps):
                 if self.interrupt:
                     continue
 
@@ -674,7 +695,6 @@ class CogVideoXPipeline(VideoSysPipeline):
                     timestep=timestep,
                     image_rotary_emb=image_rotary_emb,
                     return_dict=False,
-                    all_timesteps=timesteps,
                 )[0]
                 noise_pred = noise_pred.float()
 
@@ -713,8 +733,8 @@ class CogVideoXPipeline(VideoSysPipeline):
                     prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
                     negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
 
-                # if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
-                #     progress_bar.update()
+                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                    progress_bar.update()
 
         if not output_type == "latent":
             video = self.decode_latents(latents)

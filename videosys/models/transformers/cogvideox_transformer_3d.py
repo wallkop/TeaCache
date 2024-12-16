@@ -22,15 +22,9 @@ from diffusers.utils import is_torch_version
 from diffusers.utils.torch_utils import maybe_allow_in_graph
 from torch import nn
 
-from videosys.core.comm import all_to_all_comm, gather_sequence, get_spatial_pad, set_spatial_pad, split_sequence
+from videosys.core.comm import all_to_all_comm, gather_sequence, get_pad, set_pad, split_sequence
 from videosys.core.pab_mgr import enable_pab, if_broadcast_spatial
-from videosys.core.parallel_mgr import (
-    enable_sequence_parallel,
-    get_cfg_parallel_group,
-    get_cfg_parallel_size,
-    get_sequence_parallel_group,
-    get_sequence_parallel_size,
-)
+from videosys.core.parallel_mgr import ParallelManager
 from videosys.models.modules.embeddings import apply_rotary_emb
 from videosys.utils.utils import batch_func
 
@@ -47,6 +41,49 @@ class CogVideoXAttnProcessor2_0:
     def __init__(self):
         if not hasattr(F, "scaled_dot_product_attention"):
             raise ImportError("CogVideoXAttnProcessor requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0.")
+
+    def _remove_extra_encoder(self, hidden_states, text_seq_length, attn):
+        # current layout is [text, 1/n seq, text, 1/n seq, ...]
+        # we want to remove the all the text info [text, seq]
+        sp_size = attn.parallel_manager.sp_size
+        split_seq = hidden_states.split(hidden_states.size(2) // sp_size, dim=2)
+        encoder_hidden_states = split_seq[0][:, :, :text_seq_length]
+        new_seq = [encoder_hidden_states]
+        for i in range(sp_size):
+            new_seq.append(split_seq[i][:, :, text_seq_length:])
+        hidden_states = torch.cat(new_seq, dim=2)
+
+        # remove padding added when all2all
+        # if pad is removed earlier than this
+        # the split size will be wrong
+        pad = get_pad("pad")
+        if pad > 0:
+            hidden_states = hidden_states.narrow(2, 0, hidden_states.size(2) - pad)
+        return hidden_states
+
+    def _add_extra_encoder(self, hidden_states, text_seq_length, attn):
+        # add padding for split and later all2all
+        # if pad is removed later than this
+        # the split size will be wrong
+        pad = get_pad("pad")
+        if pad > 0:
+            pad_shape = list(hidden_states.shape)
+            pad_shape[1] = pad
+            pad_tensor = torch.zeros(pad_shape, device=hidden_states.device, dtype=hidden_states.dtype)
+            hidden_states = torch.cat([hidden_states, pad_tensor], dim=1)
+
+        # current layout is [text, seq]
+        # we want to add the extra encoder info [text, 1/n seq, text, 1/n seq, ...]
+        sp_size = attn.parallel_manager.sp_size
+        encoder = hidden_states[:, :text_seq_length]
+        seq = hidden_states[:, text_seq_length:]
+        seq = seq.split(seq.size(1) // sp_size, dim=1)
+        new_seq = []
+        for i in range(sp_size):
+            new_seq.append(encoder)
+            new_seq.append(seq[i])
+        hidden_states = torch.cat(new_seq, dim=1)
+        return hidden_states
 
     def __call__(
         self,
@@ -72,13 +109,15 @@ class CogVideoXAttnProcessor2_0:
         key = attn.to_k(hidden_states)
         value = attn.to_v(hidden_states)
 
-        if enable_sequence_parallel():
+        if attn.parallel_manager.sp_size > 1:
             assert (
-                attn.heads % get_sequence_parallel_size() == 0
-            ), f"Number of heads {attn.heads} must be divisible by sequence parallel size {get_sequence_parallel_size()}"
-            attn_heads = attn.heads // get_sequence_parallel_size()
+                attn.heads % attn.parallel_manager.sp_size == 0
+            ), f"Number of heads {attn.heads} must be divisible by sequence parallel size {attn.parallel_manager.sp_size}"
+            attn_heads = attn.heads // attn.parallel_manager.sp_size
+            # normally we operate pad for every all2all. but for more convient implementation
+            # we move pad operation to encoder add and remove in cogvideo
             query, key, value = map(
-                lambda x: all_to_all_comm(x, get_sequence_parallel_group(), scatter_dim=2, gather_dim=1),
+                lambda x: all_to_all_comm(x, attn.parallel_manager.sp_group, scatter_dim=2, gather_dim=1),
                 [query, key, value],
             )
         else:
@@ -95,6 +134,13 @@ class CogVideoXAttnProcessor2_0:
             query = attn.norm_q(query)
         if attn.norm_k is not None:
             key = attn.norm_k(key)
+
+        if attn.parallel_manager.sp_size > 1:
+            # remove extra encoder for attention
+            query, key, value = map(
+                lambda x: self._remove_extra_encoder(x, text_seq_length, attn),
+                [query, key, value],
+            )
 
         # Apply RoPE if needed
         if image_rotary_emb is not None:
@@ -113,77 +159,10 @@ class CogVideoXAttnProcessor2_0:
 
         hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn_heads * head_dim)
 
-        if enable_sequence_parallel():
-            hidden_states = all_to_all_comm(hidden_states, get_sequence_parallel_group(), scatter_dim=1, gather_dim=2)
-
-        # linear proj
-        hidden_states = attn.to_out[0](hidden_states)
-        # dropout
-        hidden_states = attn.to_out[1](hidden_states)
-
-        encoder_hidden_states, hidden_states = hidden_states.split(
-            [text_seq_length, hidden_states.size(1) - text_seq_length], dim=1
-        )
-        return hidden_states, encoder_hidden_states
-
-
-class FusedCogVideoXAttnProcessor2_0:
-    r"""
-    Processor for implementing scaled dot-product attention for the CogVideoX model. It applies a rotary embedding on
-    query and key vectors, but does not include spatial normalization.
-    """
-
-    def __init__(self):
-        if not hasattr(F, "scaled_dot_product_attention"):
-            raise ImportError("CogVideoXAttnProcessor requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0.")
-
-    def __call__(
-        self,
-        attn: Attention,
-        hidden_states: torch.Tensor,
-        encoder_hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        image_rotary_emb: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        text_seq_length = encoder_hidden_states.size(1)
-
-        hidden_states = torch.cat([encoder_hidden_states, hidden_states], dim=1)
-
-        batch_size, sequence_length, _ = (
-            hidden_states.shape if encoder_hidden_states is None else encoder_hidden_states.shape
-        )
-
-        if attention_mask is not None:
-            attention_mask = attn.prepare_attention_mask(attention_mask, sequence_length, batch_size)
-            attention_mask = attention_mask.view(batch_size, attn.heads, -1, attention_mask.shape[-1])
-
-        qkv = attn.to_qkv(hidden_states)
-        split_size = qkv.shape[-1] // 3
-        query, key, value = torch.split(qkv, split_size, dim=-1)
-
-        inner_dim = key.shape[-1]
-        head_dim = inner_dim // attn.heads
-
-        query = query.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-        key = key.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-        value = value.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
-
-        if attn.norm_q is not None:
-            query = attn.norm_q(query)
-        if attn.norm_k is not None:
-            key = attn.norm_k(key)
-
-        # Apply RoPE if needed
-        if image_rotary_emb is not None:
-            query[:, :, text_seq_length:] = apply_rotary_emb(query[:, :, text_seq_length:], image_rotary_emb)
-            if not attn.is_cross_attention:
-                key[:, :, text_seq_length:] = apply_rotary_emb(key[:, :, text_seq_length:], image_rotary_emb)
-
-        hidden_states = F.scaled_dot_product_attention(
-            query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False
-        )
-
-        hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn.heads * head_dim)
+        if attn.parallel_manager.sp_size > 1:
+            # add extra encoder for all_to_all
+            hidden_states = self._add_extra_encoder(hidden_states, text_seq_length, attn)
+            hidden_states = all_to_all_comm(hidden_states, attn.parallel_manager.sp_group, scatter_dim=1, gather_dim=2)
 
         # linear proj
         hidden_states = attn.to_out[0](hidden_states)
@@ -266,6 +245,9 @@ class CogVideoXBlock(nn.Module):
             processor=CogVideoXAttnProcessor2_0(),
         )
 
+        # parallel
+        self.attn1.parallel_manager = None
+
         # 2. Feed Forward
         self.norm2 = CogVideoXLayerNormZero(time_embed_dim, dim, norm_elementwise_affine, norm_eps, bias=True)
 
@@ -300,7 +282,7 @@ class CogVideoXBlock(nn.Module):
 
         # attention
         if enable_pab():
-            broadcast_attn, self.attn_count = if_broadcast_spatial(int(timestep[0]), self.attn_count, self.block_idx)
+            broadcast_attn, self.attn_count = if_broadcast_spatial(int(timestep[0]), self.attn_count)
         if enable_pab() and broadcast_attn:
             attn_hidden_states, attn_encoder_hidden_states = self.last_attn
         else:
@@ -474,6 +456,23 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
 
         self.gradient_checkpointing = False
 
+        # parallel
+        self.parallel_manager = None
+
+    def enable_parallel(self, dp_size, sp_size, enable_cp):
+        # update cfg parallel
+        if enable_cp and sp_size % 2 == 0:
+            sp_size = sp_size // 2
+            cp_size = 2
+        else:
+            cp_size = 1
+
+        self.parallel_manager: ParallelManager = ParallelManager(dp_size, cp_size, sp_size)
+
+        for _, module in self.named_modules():
+            if hasattr(module, "parallel_manager"):
+                module.parallel_manager = self.parallel_manager
+
     def _set_gradient_checkpointing(self, module, value=False):
         self.gradient_checkpointing = value
 
@@ -485,9 +484,8 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
         timestep_cond: Optional[torch.Tensor] = None,
         image_rotary_emb: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
         return_dict: bool = True,
-        all_timesteps=None,
     ):
-        if get_cfg_parallel_size() > 1:
+        if self.parallel_manager.cp_size > 1:
             (
                 hidden_states,
                 encoder_hidden_states,
@@ -495,7 +493,7 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
                 timestep_cond,
                 image_rotary_emb,
             ) = batch_func(
-                partial(split_sequence, process_group=get_cfg_parallel_group(), dim=0),
+                partial(split_sequence, process_group=self.parallel_manager.cp_group, dim=0),
                 hidden_states,
                 encoder_hidden_states,
                 timestep,
@@ -530,9 +528,9 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
         encoder_hidden_states = hidden_states[:, :text_seq_length]
         hidden_states = hidden_states[:, text_seq_length:]
 
-        if enable_sequence_parallel():
-            set_spatial_pad(hidden_states.shape[1])
-            hidden_states = split_sequence(hidden_states, get_sequence_parallel_group(), dim=1, pad=get_spatial_pad())
+        if self.parallel_manager.sp_size > 1:
+            set_pad("pad", hidden_states.shape[1], self.parallel_manager.sp_group)
+            hidden_states = split_sequence(hidden_states, self.parallel_manager.sp_group, dim=1, pad=get_pad("pad"))
 
         # 4. Transformer blocks
         for i, block in enumerate(self.transformer_blocks):
@@ -562,8 +560,8 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
                     timestep=timesteps if enable_pab() else None,
                 )
 
-        if enable_sequence_parallel():
-            hidden_states = gather_sequence(hidden_states, get_sequence_parallel_group(), dim=1, pad=get_spatial_pad())
+        if self.parallel_manager.sp_size > 1:
+            hidden_states = gather_sequence(hidden_states, self.parallel_manager.sp_group, dim=1, pad=get_pad("pad"))
 
         if not self.config.use_rotary_positional_embeddings:
             # CogVideoX-2B
@@ -583,8 +581,8 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
         output = hidden_states.reshape(batch_size, num_frames, height // p, width // p, channels, p, p)
         output = output.permute(0, 1, 4, 2, 5, 3, 6).flatten(5, 6).flatten(3, 4)
 
-        if get_cfg_parallel_size() > 1:
-            output = gather_sequence(output, get_cfg_parallel_group(), dim=0)
+        if self.parallel_manager.cp_size > 1:
+            output = gather_sequence(output, self.parallel_manager.cp_group, dim=0)
 
         if not return_dict:
             return (output,)

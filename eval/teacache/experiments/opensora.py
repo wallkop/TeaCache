@@ -3,23 +3,23 @@ from videosys import OpenSoraConfig, VideoSysEngine
 import torch
 from einops import rearrange
 from videosys.models.transformers.open_sora_transformer_3d import t2i_modulate, auto_grad_checkpoint
-from videosys.core.comm import all_to_all_with_pad, gather_sequence, get_temporal_pad, set_spatial_pad, set_temporal_pad, split_sequence
+from videosys.core.comm import all_to_all_with_pad, gather_sequence, get_pad, set_pad, split_sequence
 import numpy as np
 from videosys.utils.utils import batch_func
-from videosys.core.parallel_mgr import (
-    enable_sequence_parallel,
-    get_cfg_parallel_size,
-    get_data_parallel_group,
-    get_sequence_parallel_group,
-)
+from functools import partial
 
 def teacache_forward(
         self, x, timestep, all_timesteps, y, mask=None, x_mask=None, fps=None, height=None, width=None, **kwargs
     ):
         # === Split batch ===
-        if get_cfg_parallel_size() > 1:
+        if self.parallel_manager.cp_size > 1:
             x, timestep, y, x_mask, mask = batch_func(
-                partial(split_sequence, process_group=get_data_parallel_group(), dim=0), x, timestep, y, x_mask, mask
+                partial(split_sequence, process_group=self.parallel_manager.cp_group, dim=0),
+                x,
+                timestep,
+                y,
+                x_mask,
+                mask,
             )
 
         dtype = self.x_embedder.proj.weight.dtype
@@ -60,7 +60,7 @@ def teacache_forward(
         # === get x embed ===
         x = self.x_embedder(x)  # [B, N, C]
         x = rearrange(x, "B (T S) C -> B T S C", T=T, S=S)
-        x = x + pos_emb       
+        x = x + pos_emb
 
         if self.enable_teacache:
             inp = x.clone()
@@ -84,7 +84,6 @@ def teacache_forward(
                     self.accumulated_rel_l1_distance = 0
             self.previous_modulated_input = modulated_inp
 
-
         # === blocks ===
         if self.enable_teacache:
             if not should_calc:
@@ -92,16 +91,15 @@ def teacache_forward(
                 x += self.previous_residual
             else:
                 # shard over the sequence dim if sp is enabled
-                if enable_sequence_parallel():
-                    set_temporal_pad(T)
-                    set_spatial_pad(S)
-                    x = split_sequence(x, get_sequence_parallel_group(), dim=1, grad_scale="down", pad=get_temporal_pad())
+                if self.parallel_manager.sp_size > 1:
+                    set_pad("temporal", T, self.parallel_manager.sp_group)
+                    set_pad("spatial", S, self.parallel_manager.sp_group)
+                    x = split_sequence(x, self.parallel_manager.sp_group, dim=1, grad_scale="down", pad=get_pad("temporal"))
                     T = x.shape[1]
                     x_mask_org = x_mask
                     x_mask = split_sequence(
-                        x_mask, get_sequence_parallel_group(), dim=1, grad_scale="down", pad=get_temporal_pad()
+                        x_mask, self.parallel_manager.sp_group, dim=1, grad_scale="down", pad=get_pad("temporal")
                     )
-
                 x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
                 origin_x = x.clone().detach()
                 for spatial_block, temporal_block in zip(self.spatial_blocks, self.temporal_blocks):
@@ -135,16 +133,17 @@ def teacache_forward(
                 self.previous_residual = x - origin_x
         else:
             # shard over the sequence dim if sp is enabled
-            if enable_sequence_parallel():
-                set_temporal_pad(T)
-                set_spatial_pad(S)
-                x = split_sequence(x, get_sequence_parallel_group(), dim=1, grad_scale="down", pad=get_temporal_pad())
+            if self.parallel_manager.sp_size > 1:
+                set_pad("temporal", T, self.parallel_manager.sp_group)
+                set_pad("spatial", S, self.parallel_manager.sp_group)
+                x = split_sequence(x, self.parallel_manager.sp_group, dim=1, grad_scale="down", pad=get_pad("temporal"))
                 T = x.shape[1]
                 x_mask_org = x_mask
                 x_mask = split_sequence(
-                    x_mask, get_sequence_parallel_group(), dim=1, grad_scale="down", pad=get_temporal_pad()
+                    x_mask, self.parallel_manager.sp_group, dim=1, grad_scale="down", pad=get_pad("temporal")
                 )
             x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
+
             for spatial_block, temporal_block in zip(self.spatial_blocks, self.temporal_blocks):
                 x = auto_grad_checkpoint(
                     spatial_block,
@@ -174,25 +173,23 @@ def teacache_forward(
                     all_timesteps=all_timesteps,
                 )
 
-        if enable_sequence_parallel():
+        if self.parallel_manager.sp_size > 1:
             if self.enable_teacache:
                 if should_calc:
                     x = rearrange(x, "B (T S) C -> B T S C", T=T, S=S)
                     self.previous_residual = rearrange(self.previous_residual, "B (T S) C -> B T S C", T=T, S=S)
-                    x = gather_sequence(x, self.parallel_manager.sp_group, dim=1, grad_scale="up", pad=get_temporal_pad("temporal"))
-                    self.previous_residual = gather_sequence(self.previous_residual, self.parallel_manager.sp_group, dim=1, grad_scale="up", pad=get_temporal_pad("temporal"))
+                    x = gather_sequence(x, self.parallel_manager.sp_group, dim=1, grad_scale="up", pad=get_pad("temporal"))
+                    self.previous_residual = gather_sequence(self.previous_residual, self.parallel_manager.sp_group, dim=1, grad_scale="up", pad=get_pad("temporal"))
                     T, S = x.shape[1], x.shape[2]
                     x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
                     self.previous_residual = rearrange(self.previous_residual, "B T S C -> B (T S) C", T=T, S=S)
                     x_mask = x_mask_org                                 
             else:
                 x = rearrange(x, "B (T S) C -> B T S C", T=T, S=S)
-                x = gather_sequence(x, self.parallel_manager.sp_group, dim=1, grad_scale="up", pad=get_temporal_pad("temporal"))
+                x = gather_sequence(x, self.parallel_manager.sp_group, dim=1, grad_scale="up", pad=get_pad("temporal"))
                 T, S = x.shape[1], x.shape[2]
                 x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
                 x_mask = x_mask_org
-        
-
         # === final layer ===
         x = self.final_layer(x, t, x_mask, t0, T, S)
         x = self.unpatchify(x, T, H, W, Tx, Hx, Wx)
@@ -201,11 +198,10 @@ def teacache_forward(
         x = x.to(torch.float32)
 
         # === Gather Output ===
-        if get_cfg_parallel_size() > 1:
-            x = gather_sequence(x, get_data_parallel_group(), dim=0)
+        if self.parallel_manager.cp_size > 1:
+            x = gather_sequence(x, self.parallel_manager.cp_group, dim=0)
 
         return x
-
 
 def eval_base(prompt_list):
     config = OpenSoraConfig()
@@ -235,9 +231,9 @@ def eval_teacache_fast(prompt_list):
     generate_func(engine, prompt_list, "./samples/opensora_teacache_fast", loop=5)
 
 
-
 if __name__ == "__main__":
     prompt_list = read_prompt_list("vbench/VBench_full_info.json")
-    # eval_base(prompt_list)
+    eval_base(prompt_list)
     eval_teacache_slow(prompt_list)
-    # eval_teacache_fast(prompt_list)
+    eval_teacache_fast(prompt_list)
+    

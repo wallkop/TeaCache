@@ -7,8 +7,6 @@ from einops import rearrange
 from torch import Tensor
 from torch.distributed import ProcessGroup
 
-from videosys.core.parallel_mgr import get_sequence_parallel_size
-
 # ======================================================
 # Model
 # ======================================================
@@ -369,30 +367,18 @@ def gather_sequence(input_, process_group, dim, grad_scale=1.0, pad=0):
 # Pad
 # ==============================
 
-SPTIAL_PAD = 0
-TEMPORAL_PAD = 0
+PAD_DICT = {}
 
 
-def set_spatial_pad(dim_size: int):
-    sp_size = get_sequence_parallel_size()
+def set_pad(name: str, dim_size: int, parallel_group: dist.ProcessGroup):
+    sp_size = dist.get_world_size(parallel_group)
     pad = (sp_size - (dim_size % sp_size)) % sp_size
-    global SPTIAL_PAD
-    SPTIAL_PAD = pad
+    global PAD_DICT
+    PAD_DICT[name] = pad
 
 
-def get_spatial_pad() -> int:
-    return SPTIAL_PAD
-
-
-def set_temporal_pad(dim_size: int):
-    sp_size = get_sequence_parallel_size()
-    pad = (sp_size - (dim_size % sp_size)) % sp_size
-    global TEMPORAL_PAD
-    TEMPORAL_PAD = pad
-
-
-def get_temporal_pad() -> int:
-    return TEMPORAL_PAD
+def get_pad(name) -> int:
+    return PAD_DICT[name]
 
 
 def all_to_all_with_pad(
@@ -418,3 +404,17 @@ def all_to_all_with_pad(
         input_ = input_.narrow(gather_dim, 0, input_.size(gather_dim) - gather_pad)
 
     return input_
+
+
+def split_from_second_dim(x, batch_size, parallel_group):
+    x = x.view(batch_size, -1, *x.shape[1:])
+    x = split_sequence(x, parallel_group, dim=1, grad_scale="down", pad=get_pad("temporal"))
+    x = x.reshape(-1, *x.shape[2:])
+    return x
+
+
+def gather_from_second_dim(x, batch_size, parallel_group):
+    x = x.view(batch_size, -1, *x.shape[1:])
+    x = gather_sequence(x, parallel_group, dim=1, grad_scale="up", pad=get_pad("temporal"))
+    x = x.reshape(-1, *x.shape[2:])
+    return x

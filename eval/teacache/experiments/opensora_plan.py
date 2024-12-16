@@ -5,12 +5,7 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 import numpy as np
 from typing import Any, Dict, Optional, Tuple
-from videosys.core.parallel_mgr import (
-    enable_sequence_parallel,
-    get_cfg_parallel_group,
-    get_cfg_parallel_size,
-    get_sequence_parallel_group,
-)
+from videosys.core.comm import all_to_all_with_pad, gather_sequence, get_pad, set_pad, split_sequence
 
 def teacache_forward(
         self,
@@ -66,7 +61,7 @@ def teacache_forward(
             `tuple` where the first element is the sample tensor.
         """
         # 0. Split batch
-        if get_cfg_parallel_size() > 1:
+        if self.parallel_manager.cp_size > 1:
             (
                 hidden_states,
                 timestep,
@@ -75,7 +70,7 @@ def teacache_forward(
                 attention_mask,
                 encoder_attention_mask,
             ) = batch_func(
-                partial(split_sequence, process_group=get_cfg_parallel_group(), dim=0),
+                partial(split_sequence, process_group=self.parallel_manager.cp_group, dim=0),
                 hidden_states,
                 timestep,
                 encoder_hidden_states,
@@ -204,20 +199,20 @@ def teacache_forward(
             if not should_calc:
                 hidden_states += self.previous_residual
             else:
-                if enable_sequence_parallel():
-                    set_temporal_pad(frame + use_image_num)
-                    set_spatial_pad(num_patches)
+                if self.parallel_manager.sp_size > 1:
+                    set_pad("temporal", frame + use_image_num, self.parallel_manager.sp_group)
+                    set_pad("spatial", num_patches, self.parallel_manager.sp_group)
                     hidden_states = self.split_from_second_dim(hidden_states, input_batch_size)
                     encoder_hidden_states_spatial = self.split_from_second_dim(encoder_hidden_states_spatial, input_batch_size)
                     timestep_spatial = self.split_from_second_dim(timestep_spatial, input_batch_size)
                     attention_mask = self.split_from_second_dim(attention_mask, input_batch_size)
                     attention_mask_compress = self.split_from_second_dim(attention_mask_compress, input_batch_size)
                     temp_pos_embed = split_sequence(
-                        self.temp_pos_embed, get_sequence_parallel_group(), dim=1, grad_scale="down", pad=get_temporal_pad()
+                        self.temp_pos_embed, self.parallel_manager.sp_group, dim=1, grad_scale="down", pad=get_pad("temporal")
                     )
                 else:
                     temp_pos_embed = self.temp_pos_embed
-                ori_hidden_states = hidden_states.clone()
+                ori_hidden_states = hidden_states.clone().detach()
                 for i, (spatial_block, temp_block) in enumerate(zip(self.transformer_blocks, self.temporal_transformer_blocks)):
                     if self.training and self.gradient_checkpointing:
                         hidden_states = torch.utils.checkpoint.checkpoint(
@@ -359,20 +354,20 @@ def teacache_forward(
                                 ).contiguous()
                 self.previous_residual = hidden_states - ori_hidden_states
         else:
-            if enable_sequence_parallel():
-                set_temporal_pad(frame + use_image_num)
-                set_spatial_pad(num_patches)
+            if self.parallel_manager.sp_size > 1:
+                set_pad("temporal", frame + use_image_num, self.parallel_manager.sp_group)
+                set_pad("spatial", num_patches, self.parallel_manager.sp_group)
                 hidden_states = self.split_from_second_dim(hidden_states, input_batch_size)
+                self.previous_residual = self.split_from_second_dim(self.previous_residual, input_batch_size) if self.previous_residual is not None else None
                 encoder_hidden_states_spatial = self.split_from_second_dim(encoder_hidden_states_spatial, input_batch_size)
                 timestep_spatial = self.split_from_second_dim(timestep_spatial, input_batch_size)
                 attention_mask = self.split_from_second_dim(attention_mask, input_batch_size)
                 attention_mask_compress = self.split_from_second_dim(attention_mask_compress, input_batch_size)
                 temp_pos_embed = split_sequence(
-                    self.temp_pos_embed, get_sequence_parallel_group(), dim=1, grad_scale="down", pad=get_temporal_pad()
+                    self.temp_pos_embed, self.parallel_manager.sp_group, dim=1, grad_scale="down", pad=get_pad("temporal")
                 )
             else:
                 temp_pos_embed = self.temp_pos_embed
-
             for i, (spatial_block, temp_block) in enumerate(zip(self.transformer_blocks, self.temporal_transformer_blocks)):
                 if self.training and self.gradient_checkpointing:
                     hidden_states = torch.utils.checkpoint.checkpoint(
@@ -512,8 +507,8 @@ def teacache_forward(
                             hidden_states = rearrange(
                                 hidden_states, "(b t) f d -> (b f) t d", b=input_batch_size
                             ).contiguous()
-
-        if enable_sequence_parallel():
+        
+        if self.parallel_manager.sp_size > 1:
             if self.enable_teacache:
                 if should_calc:
                     hidden_states = self.gather_from_second_dim(hidden_states, input_batch_size)
@@ -550,8 +545,8 @@ def teacache_forward(
             output = rearrange(output, "(b f) c h w -> b c f h w", b=input_batch_size).contiguous()
 
         # 3. Gather batch for data parallelism
-        if get_cfg_parallel_size() > 1:
-            output = gather_sequence(output, get_cfg_parallel_group(), dim=0)
+        if self.parallel_manager.cp_size > 1:
+            output = gather_sequence(output, self.parallel_manager.cp_group, dim=0)
 
         if not return_dict:
             return (output,)
@@ -559,14 +554,8 @@ def teacache_forward(
         return Transformer3DModelOutput(sample=output)
 
 
-
-def eval_base(prompt_list):
-    config = OpenSoraPlanConfig()
-    engine = VideoSysEngine(config)
-    generate_func(engine, prompt_list, "./samples/opensoraplan_base", loop=5)
-
 def eval_teacache_slow(prompt_list):
-    config = OpenSoraPlanConfig()
+    config = OpenSoraPlanConfig(version="v110", transformer_type="65x512x512")
     engine = VideoSysEngine(config)
     engine.driver_worker.transformer.enable_teacache = True
     engine.driver_worker.transformer.rel_l1_thresh = 0.1
@@ -577,7 +566,7 @@ def eval_teacache_slow(prompt_list):
     generate_func(engine, prompt_list, "./samples/opensoraplan_teacache_slow", loop=5)
 
 def eval_teacache_fast(prompt_list):
-    config = OpenSoraPlanConfig()
+    config = OpenSoraPlanConfig(version="v110", transformer_type="65x512x512")
     engine = VideoSysEngine(config)
     engine.driver_worker.transformer.enable_teacache = True
     engine.driver_worker.transformer.rel_l1_thresh = 0.2
@@ -587,8 +576,16 @@ def eval_teacache_fast(prompt_list):
     engine.driver_worker.transformer.__class__.forward = teacache_forward
     generate_func(engine, prompt_list, "./samples/opensoraplan_teacache_fast", loop=5)
 
+
+def eval_base(prompt_list):
+    config = OpenSoraPlanConfig(version="v110", transformer_type="65x512x512", )
+    engine = VideoSysEngine(config)
+    generate_func(engine, prompt_list, "./samples/opensoraplan_base", loop=5)
+
+
 if __name__ == "__main__":
     prompt_list = read_prompt_list("vbench/VBench_full_info.json")
-    # eval_base(prompt_list) 
+    eval_base(prompt_list) 
     eval_teacache_slow(prompt_list) 
-    # eval_teacache_fast(prompt_list) 
+    eval_teacache_fast(prompt_list) 
+    

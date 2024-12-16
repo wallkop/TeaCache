@@ -29,13 +29,12 @@ from videosys.core.pab_mgr import PABConfig, set_pab_manager, update_steps
 from videosys.core.pipeline import VideoSysPipeline, VideoSysPipelineOutput
 from videosys.models.transformers.latte_transformer_3d import LatteT2V
 from videosys.utils.logging import logger
-from videosys.utils.utils import save_video
+from videosys.utils.utils import save_video, set_seed
 
 
 class LattePABConfig(PABConfig):
     def __init__(
         self,
-        steps: int = 50,
         spatial_broadcast: bool = True,
         spatial_threshold: list = [100, 800],
         spatial_range: int = 2,
@@ -62,7 +61,6 @@ class LattePABConfig(PABConfig):
         },
     ):
         super().__init__(
-            steps=steps,
             spatial_broadcast=spatial_broadcast,
             spatial_threshold=spatial_threshold,
             spatial_range=spatial_range,
@@ -188,7 +186,7 @@ class LattePipeline(VideoSysPipeline):
         r"[" + "#®•©™&@·º½¾¿¡§~" + "\)" + "\(" + "\]" + "\[" + "\}" + "\{" + "\|" + "\\" + "\/" + "\*" + r"]{1,}"
     )  # noqa
 
-    _optional_components = ["tokenizer", "text_encoder"]
+    _optional_components = ["tokenizer", "text_encoder", "vae", "transformer", "scheduler"]
     model_cpu_offload_seq = "text_encoder->transformer->vae"
 
     def __init__(
@@ -238,9 +236,6 @@ class LattePipeline(VideoSysPipeline):
         if config.enable_pab:
             set_pab_manager(config.pab_config)
 
-        # set eval and device
-        self.set_eval_and_device(device, vae, transformer)
-
         self.register_modules(
             tokenizer=tokenizer, text_encoder=text_encoder, vae=vae, transformer=transformer, scheduler=scheduler
         )
@@ -249,10 +244,35 @@ class LattePipeline(VideoSysPipeline):
         if config.cpu_offload:
             self.enable_model_cpu_offload()
         else:
-            self.set_eval_and_device(device, text_encoder)
+            self.set_eval_and_device(device, text_encoder, vae, transformer)
 
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
         self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
+
+        # parallel
+        self._set_parallel()
+
+    def _set_seed(self, seed):
+        if dist.get_world_size() == 1:
+            set_seed(seed)
+        else:
+            set_seed(seed, self.transformer.parallel_manager.dp_rank)
+
+    def _set_parallel(
+        self, dp_size: Optional[int] = None, sp_size: Optional[int] = None, enable_cp: Optional[bool] = False
+    ):
+        # init sequence parallel
+        if sp_size is None:
+            sp_size = dist.get_world_size()
+            dp_size = 1
+        else:
+            assert (
+                dist.get_world_size() % sp_size == 0
+            ), f"world_size {dist.get_world_size()} must be divisible by sp_size"
+            dp_size = dist.get_world_size() // sp_size
+
+        # transformer parallel
+        self.transformer.enable_parallel(dp_size, sp_size, enable_cp)
 
     # Adapted from https://github.com/PixArt-alpha/PixArt-alpha/blob/master/diffusion/model/utils.py
     def mask_text_embeddings(self, emb, mask):
@@ -658,6 +678,7 @@ class LattePipeline(VideoSysPipeline):
         negative_prompt: str = "",
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
+        seed: int = -1,
         num_images_per_prompt: Optional[int] = 1,
         eta: float = 0.0,
         generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
@@ -745,6 +766,7 @@ class LattePipeline(VideoSysPipeline):
         width = 512
         update_steps(num_inference_steps)
         self.check_inputs(prompt, height, width, negative_prompt, callback_steps, prompt_embeds, negative_prompt_embeds)
+        self._set_seed(seed)
 
         # 2. Default height and width to transformer
         if prompt is not None and isinstance(prompt, str):
