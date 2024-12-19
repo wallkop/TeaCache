@@ -6,6 +6,9 @@ from einops import rearrange, repeat
 import numpy as np
 from typing import Any, Dict, Optional, Tuple
 from videosys.core.comm import all_to_all_with_pad, gather_sequence, get_pad, set_pad, split_sequence
+from videosys.models.transformers.open_sora_plan_v110_transformer_3d import Transformer3DModelOutput 
+from videosys.utils.utils import batch_func
+from functools import partial
 
 def teacache_forward(
         self,

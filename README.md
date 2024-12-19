@@ -53,6 +53,11 @@
 
 ![visualization](./assets/tisser.png)
 
+## Latest News 🔥
+- [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
+- [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
+- [2024/11/28] 🎉 Release the [paper](https://arxiv.org/abs/2411.19108) of TeaCache.
+
 ## Introduction
 We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps. For more details and visual results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
 
@@ -92,6 +97,7 @@ cd eval/teacache
 python experiments/latte.py
 python experiments/opensora.py
 python experiments/open_sora_plan.py
+python experiments/cogvideox.py
 ```
 
 2. Calculate Vbench score
@@ -116,19 +122,17 @@ python common_metrics/eval.py --gt_video_dir aa --generated_video_dir bb
 
 
 ## Citation
+If you find TeaCache is useful in your research or applications, please consider giving us a star 🌟 and citing it by the following BibTeX entry.
 
 ```
-@misc{liu2024timestep,
-      title={Timestep Embedding Tells: It's Time to Cache for Video Diffusion Model},
-      author={Feng Liu and Shiwei Zhang and Xiaofeng Wang and Yujie Wei and Haonan Qiu and Yuzhong Zhao and Yingya Zhang and Qixiang Ye and Fang Wan},
-      year={2024},
-      eprint={2411.19108},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2411.19108}
+@article{liu2024timestep,
+  title={Timestep Embedding Tells: It's Time to Cache for Video Diffusion Model},
+  author={Liu, Feng and Zhang, Shiwei and Wang, Xiaofeng and Wei, Yujie and Qiu, Haonan and Zhao, Yuzhong and Zhang, Yingya and Ye, Qixiang and Wan, Fang},
+  journal={arXiv preprint arXiv:2411.19108},
+  year={2024}
 }
 ```
 
 ## Acknowledgement
 
-This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys). Thanks for their contributions!
+This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan),  [Latte](https://github.com/Vchitect/Latte) and [CogVideoX](https://github.com/THUDM/CogVideo). Thanks for their contributions!

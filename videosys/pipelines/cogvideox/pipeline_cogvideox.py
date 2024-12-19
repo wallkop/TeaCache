@@ -28,6 +28,7 @@ from videosys.schedulers.scheduling_ddim_cogvideox import CogVideoXDDIMScheduler
 from videosys.schedulers.scheduling_dpm_cogvideox import CogVideoXDPMScheduler
 from videosys.utils.logging import logger
 from videosys.utils.utils import save_video, set_seed
+import tqdm
 
 
 class CogVideoXPABConfig(PABConfig):
@@ -511,6 +512,7 @@ class CogVideoXPipeline(VideoSysPipeline):
         ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         max_sequence_length: int = 226,
+        verbose=True
     ) -> Union[VideoSysPipelineOutput, Tuple]:
         """
         Function invoked when calling the pipeline for generation.
@@ -675,10 +677,11 @@ class CogVideoXPipeline(VideoSysPipeline):
         # 8. Denoising loop
         num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
 
-        with self.progress_bar(total=num_inference_steps) as progress_bar:
-            # for DPM-solver++
-            old_pred_original_sample = None
-            for i, t in enumerate(timesteps):
+        # with self.progress_bar(total=num_inference_steps) as progress_bar:
+        progress_wrap = tqdm.tqdm if verbose and dist.get_rank() == 0 else (lambda x: x)
+        # for DPM-solver++
+        old_pred_original_sample = None
+        for i, t in progress_wrap(list(enumerate(timesteps))):
                 if self.interrupt:
                     continue
 
@@ -693,6 +696,7 @@ class CogVideoXPipeline(VideoSysPipeline):
                     hidden_states=latent_model_input,
                     encoder_hidden_states=prompt_embeds,
                     timestep=timestep,
+                    all_timesteps=timesteps,
                     image_rotary_emb=image_rotary_emb,
                     return_dict=False,
                 )[0]
@@ -733,8 +737,8 @@ class CogVideoXPipeline(VideoSysPipeline):
                     prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
                     negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
 
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
-                    progress_bar.update()
+                # if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                #     progress_bar.update()
 
         if not output_type == "latent":
             video = self.decode_latents(latents)

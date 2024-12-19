@@ -484,6 +484,7 @@ class CogVideoXTransformer3DModel(ModelMixin, ConfigMixin):
         timestep_cond: Optional[torch.Tensor] = None,
         image_rotary_emb: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
         return_dict: bool = True,
+        all_timesteps=None
     ):
         if self.parallel_manager.cp_size > 1:
             (
