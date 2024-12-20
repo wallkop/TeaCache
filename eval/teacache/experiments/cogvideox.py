@@ -70,7 +70,12 @@ def teacache_forward(
                 should_calc = True
                 self.accumulated_rel_l1_distance = 0
             else: 
-                coefficients = [-3.10658903e+01,  2.54732368e+01, -5.92380459e+00,  1.75769064e+00, -3.61568434e-03]   
+                if not self.config.use_rotary_positional_embeddings:
+                    # CogVideoX-2B
+                    coefficients = [-3.10658903e+01,  2.54732368e+01, -5.92380459e+00,  1.75769064e+00, -3.61568434e-03]   
+                else:
+                    # CogVideoX-5B
+                    coefficients = [-1.53880483e+03,  8.43202495e+02, -1.34363087e+02,  7.97131516e+00, -5.23162339e-02]
                 rescale_func = np.poly1d(coefficients)
                 self.accumulated_rel_l1_distance += rescale_func(((emb-self.previous_modulated_input).abs().mean() / self.previous_modulated_input.abs().mean()).cpu().item())
                 if self.accumulated_rel_l1_distance < self.rel_l1_thresh:
