@@ -14,7 +14,7 @@
 
 ## Usage
 
-Follow [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) to clone the repo and finish the installation, then copy 'teacache_sample_video.py' in this repo to the HunyuanVideo repo.
+Follow [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) to clone the repo and finish the installation, then copy 'teacache_sample_video.py' in this repo to the HunyuanVideo repo. You can modify the thresh in line 220 to obtain your desired trade-off between latency and visul quality.
 
 For single-gpu inference, you can use the following command:
 
@@ -48,7 +48,7 @@ torchrun --nproc_per_node=8 teacache_sample_video.py \
     --save-path ./teacache_results
 ```
 
-You can modify the thresh in line 220 to obtain your desired trade-off between latency and visul quality.
+
 
 ## Acknowledgements
 
