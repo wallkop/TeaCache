@@ -54,12 +54,16 @@
 ![visualization](./assets/tisser.png)
 
 ## Latest News 🔥
+- [2024/12/24] 🔥 Support [HunyuanVideo](https://github.com/Tencent/HunyuanVideo).
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
-- [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
+- [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) of TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
 - [2024/11/28] 🎉 Release the [paper](https://arxiv.org/abs/2411.19108) of TeaCache.
 
 ## Introduction
 We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps. For more details and visual results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
+
+## TeaCache for HunyuanVideo
+Please refer to [TeaCache4HunyuanVideo](./TeaCache4HunyuanVideo/README.md).
 
 ## Installation
 
@@ -135,4 +139,4 @@ If you find TeaCache is useful in your research or applications, please consider
 
 ## Acknowledgement
 
-This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan),  [Latte](https://github.com/Vchitect/Latte) and [CogVideoX](https://github.com/THUDM/CogVideo). Thanks for their contributions!
+This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan),  [Latte](https://github.com/Vchitect/Latte), [CogVideoX](https://github.com/THUDM/CogVideo) and [HunyuanVideo](https://github.com/Tencent/HunyuanVideo). Thanks for their contributions!
