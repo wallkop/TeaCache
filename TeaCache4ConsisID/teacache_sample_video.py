@@ -267,10 +267,10 @@ if __name__ == "__main__":
     parser.add_argument("--output_path", type=str, default="./teacache_results", help="The path where the generated video will be saved")
     # higher speedup will cause to worse quality -- 0.1 for 1.6x speedup -- 0.15 for 2.1x speedup -- 0.2 for 2.5x speedup
     parser.add_argument('--rel_l1_thresh', type=float, default=0.1, help='Higher speedup will cause to worse quality -- 0.1 for 1.6x speedup -- 0.15 for 2.1x speedup -- 0.2 for 2.5x speedup')
-    parser.add_argument('--ckpts_path', type=str, default="/storage/ysh/Code/ID_Consistency/Code/2_offen_codes/0_temp_hf/ConsisID/BestWishYsh/ConsisID-preview", help='Path to checkpoint')
+    parser.add_argument('--ckpts_path', type=str, default="BestWishYsh/ConsisID-preview", help='Path to checkpoint')
     # ConsisID works well with long and well-described prompts. Make sure the face in the image is clearly visible (e.g., preferably half-body or full-body).
     parser.add_argument('--prompt', type=str, default="The video captures a boy walking along a city street, filmed in black and white on a classic 35mm camera. His expression is thoughtful, his brow slightly furrowed as if he's lost in contemplation. The film grain adds a textured, timeless quality to the image, evoking a sense of nostalgia. Around him, the cityscape is filled with vintage buildings, cobblestone sidewalks, and softly blurred figures passing by, their outlines faint and indistinct. Streetlights cast a gentle glow, while shadows play across the boy\'s path, adding depth to the scene. The lighting highlights the boy\'s subtle smile, hinting at a fleeting moment of curiosity. The overall cinematic atmosphere, complete with classic film still aesthetics and dramatic contrasts, gives the scene an evocative and introspective feel.", help='Description of the scene for the model to interpret')
-    parser.add_argument('--image', type=str, default="/storage/ysh/Code/ID_Consistency/Code/2_offen_codes/ConsisID_upload/asserts/example_images/2.png", help='URL or path to input image')
+    parser.add_argument('--image', type=str, default="https://github.com/PKU-YuanGroup/ConsisID/blob/main/asserts/example_images/2.png?raw=true", help='URL or path to input image')
     args = parser.parse_args()
 
     main(args)
