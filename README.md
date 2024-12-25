@@ -54,7 +54,7 @@
 ![visualization](./assets/tisser.png)
 
 ## Latest News 🔥
-- [2024/12/25] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID).
+- [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID).
 - [2024/12/24] 🔥 Support [HunyuanVideo](https://github.com/Tencent/HunyuanVideo).
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
 - [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) of TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
