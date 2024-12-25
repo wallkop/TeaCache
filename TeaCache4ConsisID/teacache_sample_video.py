@@ -198,8 +198,9 @@ def main(args):
     seed = args.seed
     num_infer_steps = args.num_infer_steps
     output_path = args.output_path
-    rel_l1_thresh = args.rel_l1_thresh # higher speedup will cause to worse quality -- 0.1 for 1.6x speedup -- 0.15 for 2.1x speedup -- 0.2 for 2.5x speedup
     ckpts_path = args.ckpts_path
+    # higher speedup will cause to worse quality -- 0.1 for 1.6x speedup -- 0.15 for 2.1x speedup -- 0.2 for 2.5x speedup
+    rel_l1_thresh = args.rel_l1_thresh
     # ConsisID works well with long and well-described prompts. Make sure the face in the image is clearly visible (e.g., preferably half-body or full-body).
     prompt = args.prompt
     image = args.image
@@ -255,7 +256,7 @@ def main(args):
         generator=torch.Generator("cuda").manual_seed(seed),
     )
     file_count = len([f for f in os.listdir(output_path) if os.path.isfile(os.path.join(output_path, f))])
-    video_path = f"{output_path}/{seed}_{file_count:04d}.mp4"
+    video_path = f"{output_path}/{seed}_{rel_l1_thresh}_{file_count:04d}.mp4"
     export_to_video(video.frames[0], video_path, fps=8)
 
 
@@ -265,9 +266,9 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--num_infer_steps', type=int, default=50, help='Number of inference steps')
     parser.add_argument("--output_path", type=str, default="./teacache_results", help="The path where the generated video will be saved")
+    parser.add_argument('--ckpts_path', type=str, default="BestWishYsh/ConsisID-preview", help='Path to checkpoint')
     # higher speedup will cause to worse quality -- 0.1 for 1.6x speedup -- 0.15 for 2.1x speedup -- 0.2 for 2.5x speedup
     parser.add_argument('--rel_l1_thresh', type=float, default=0.1, help='Higher speedup will cause to worse quality -- 0.1 for 1.6x speedup -- 0.15 for 2.1x speedup -- 0.2 for 2.5x speedup')
-    parser.add_argument('--ckpts_path', type=str, default="BestWishYsh/ConsisID-preview", help='Path to checkpoint')
     # ConsisID works well with long and well-described prompts. Make sure the face in the image is clearly visible (e.g., preferably half-body or full-body).
     parser.add_argument('--prompt', type=str, default="The video captures a boy walking along a city street, filmed in black and white on a classic 35mm camera. His expression is thoughtful, his brow slightly furrowed as if he's lost in contemplation. The film grain adds a textured, timeless quality to the image, evoking a sense of nostalgia. Around him, the cityscape is filled with vintage buildings, cobblestone sidewalks, and softly blurred figures passing by, their outlines faint and indistinct. Streetlights cast a gentle glow, while shadows play across the boy\'s path, adding depth to the scene. The lighting highlights the boy\'s subtle smile, hinting at a fleeting moment of curiosity. The overall cinematic atmosphere, complete with classic film still aesthetics and dramatic contrasts, gives the scene an evocative and introspective feel.", help='Description of the video for the model to generate')
     parser.add_argument('--image', type=str, default="https://github.com/PKU-YuanGroup/ConsisID/blob/main/asserts/example_images/2.png?raw=true", help='URL or path to input image')
