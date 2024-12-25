@@ -54,6 +54,7 @@
 ![visualization](./assets/tisser.png)
 
 ## Latest News 🔥
+- [2024/12/25] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID).
 - [2024/12/24] 🔥 Support [HunyuanVideo](https://github.com/Tencent/HunyuanVideo).
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
 - [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) of TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
@@ -64,6 +65,10 @@ We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching 
 
 ## TeaCache for HunyuanVideo
 Please refer to [TeaCache4HunyuanVideo](./TeaCache4HunyuanVideo/README.md).
+
+## TeaCache for ConsisID
+
+Please refer to [TeaCache4ConsisID](./TeaCache4ConsisID/README.md).
 
 ## Installation
 
@@ -121,10 +126,6 @@ python vbench/cal_vbench.py --score_dir bbb
 python common_metrics/eval.py --gt_video_dir aa --generated_video_dir bb
 ```
 
-
-
-
-
 ## Citation
 If you find TeaCache is useful in your research or applications, please consider giving us a star 🌟 and citing it by the following BibTeX entry.
 
@@ -139,4 +140,4 @@ If you find TeaCache is useful in your research or applications, please consider
 
 ## Acknowledgement
 
-This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan),  [Latte](https://github.com/Vchitect/Latte), [CogVideoX](https://github.com/THUDM/CogVideo) and [HunyuanVideo](https://github.com/Tencent/HunyuanVideo). Thanks for their contributions!
+This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan), [Latte](https://github.com/Vchitect/Latte), [CogVideoX](https://github.com/THUDM/CogVideo), [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) and [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks for their contributions!
