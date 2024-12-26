@@ -1,8 +1,8 @@
 accelerate>0.17.0
 bs4
 click
-colossalai
-diffusers
+colossalai==0.4.0
+diffusers==0.30.0
 einops
 fabric
 ftfy
@@ -22,5 +22,5 @@ sentencepiece
 timm
 torch>=1.13
 tqdm
-peft
-transformers
+peft==0.13.2
+transformers==4.39.3
