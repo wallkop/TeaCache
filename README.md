@@ -50,7 +50,7 @@
 
 <h5 align="center">
 
-[![hf_paper](https://img.shields.io/badge/🤗-Paper%20In%20HF-red.svg)](tps://huggingface.co/papers/2411.19108)
+[![hf_paper](https://img.shields.io/badge/🤗-Paper%20In%20HF-red.svg)](https://huggingface.co/papers/2411.19108)
 [![arXiv](https://img.shields.io/badge/Arxiv-2411.19108-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2411.19108) 
 [![Home Page](https://img.shields.io/badge/Project-<Website>-blue.svg)](https://liewfeng.github.io/TeaCache/) 
 [![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](./LICENSE) 
