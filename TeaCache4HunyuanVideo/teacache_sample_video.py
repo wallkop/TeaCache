@@ -108,7 +108,9 @@ def teacache_forward(
                     should_calc = True
                     self.accumulated_rel_l1_distance = 0
             self.previous_modulated_input = modulated_inp  
-            self.cnt = 0 if self.cnt == self.num_steps-1 else self.cnt + 1          
+            self.cnt += 1
+            if self.cnt == self.num_steps:
+                self.cnt = 0          
         
         if self.enable_teacache:
             if not should_calc:
@@ -216,7 +218,7 @@ def main():
     # TeaCache
     hunyuan_video_sampler.pipeline.transformer.__class__.enable_teacache = True
     hunyuan_video_sampler.pipeline.transformer.__class__.cnt = 0
-    hunyuan_video_sampler.pipeline.transformer.__class__.num_steps = args.infer_steps - 1
+    hunyuan_video_sampler.pipeline.transformer.__class__.num_steps = args.infer_steps
     hunyuan_video_sampler.pipeline.transformer.__class__.rel_l1_thresh = 0.15 # 0.1 for 1.6x speedup, 0.15 for 2.1x speedup
     hunyuan_video_sampler.pipeline.transformer.__class__.accumulated_rel_l1_distance = 0
     hunyuan_video_sampler.pipeline.transformer.__class__.previous_modulated_input = None
