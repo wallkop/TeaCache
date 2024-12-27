@@ -3,6 +3,16 @@
 
 [TeaCache](https://github.com/LiewFeng/TeaCache) can speedup [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) 2x without much visual quality degradation, in a training-free manner.
 
+
+<video width="3840"  controls>
+    <source src="../assets/TeaCache4HunYuanVideo.mp4" type="video/mp4">
+</video>
+ <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; place-items: center; font-size: 1.2em;">
+        <div>HunyuanVideo, ~50 min</div>
+        <div>TeaCache (0.1), ~30 min</div>
+        <div>TeaCache (0.15), <font color="#FF0000">~23 min</font></div>
+</div>
+
 ## 📈 Inference Latency Comparisons on a Single A800 GPU
 
 
