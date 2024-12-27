@@ -85,7 +85,7 @@ conda create -n teacache python=3.10 -y
 conda activate teacache
 ```
 
-Install VideoSys:
+Install TeaCache:
 
 ```shell
 git clone https://github.com/LiewFeng/TeaCache

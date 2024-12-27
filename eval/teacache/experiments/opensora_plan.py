@@ -565,7 +565,7 @@ def eval_teacache_slow(prompt_list):
     engine.driver_worker.transformer.__class__.accumulated_rel_l1_distance = 0
     engine.driver_worker.transformer.__class__.previous_modulated_input = None
     engine.driver_worker.transformer.__class__.previous_residual = None
-    engine.driver_worker.transformer.__class__.__class__.forward = teacache_forward
+    engine.driver_worker.transformer.__class__.forward = teacache_forward
     generate_func(engine, prompt_list, "./samples/opensoraplan_teacache_slow", loop=5)
 
 def eval_teacache_fast(prompt_list):
@@ -576,7 +576,7 @@ def eval_teacache_fast(prompt_list):
     engine.driver_worker.transformer.__class__.accumulated_rel_l1_distance = 0
     engine.driver_worker.transformer.__class__.previous_modulated_input = None
     engine.driver_worker.transformer.__class__.previous_residual = None
-    engine.driver_worker.transformer.__class__.__class__.forward = teacache_forward
+    engine.driver_worker.transformer.__class__.forward = teacache_forward
     generate_func(engine, prompt_list, "./samples/opensoraplan_teacache_fast", loop=5)
 
 

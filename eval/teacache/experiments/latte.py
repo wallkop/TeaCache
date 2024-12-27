@@ -6,6 +6,9 @@ from torch import nn
 import numpy as np
 from typing import Any, Dict, Optional, Tuple
 from videosys.core.comm import all_to_all_with_pad, gather_sequence, get_pad, set_pad, split_sequence
+from videosys.models.transformers.latte_transformer_3d import Transformer3DModelOutput
+from videosys.utils.utils import batch_func
+from functools import partial
 
 def teacache_forward(
         self,
@@ -502,7 +505,7 @@ def eval_teacache_slow(prompt_list):
     engine.driver_worker.transformer.__class__.accumulated_rel_l1_distance = 0
     engine.driver_worker.transformer.__class__.previous_modulated_input = None
     engine.driver_worker.transformer.__class__.previous_residual = None
-    engine.driver_worker.transformer.__class__.__class__.forward = teacache_forward
+    engine.driver_worker.transformer.__class__.forward = teacache_forward
     generate_func(engine, prompt_list, "./samples/latte_teacache_slow", loop=5)
     
 def eval_teacache_fast(prompt_list):
@@ -513,7 +516,7 @@ def eval_teacache_fast(prompt_list):
     engine.driver_worker.transformer.__class__.accumulated_rel_l1_distance = 0
     engine.driver_worker.transformer.__class__.previous_modulated_input = None
     engine.driver_worker.transformer.__class__.previous_residual = None
-    engine.driver_worker.transformer.__class__.__class__.forward = teacache_forward
+    engine.driver_worker.transformer.__class__.forward = teacache_forward
     generate_func(engine, prompt_list, "./samples/latte_teacache_fast", loop=5)
     
 
