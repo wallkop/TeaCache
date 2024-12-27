@@ -46,22 +46,31 @@
             (* Work was done during internship at Alibaba Group. † Corresponding author.)
           </div>
 
-<div class="is-size-5 publication-authors", align="center">
-    <a href="https://arxiv.org/abs/2411.19108">Paper</a> | 
-    <a href="https://liewfeng.github.io/TeaCache/">Project Page</a>
-</div>
+<h5 align="center"> If you like our project, please give us a star ⭐ on GitHub for the latest update.  </h2>
+
+<h5 align="center">
+
+[![hf_paper](https://img.shields.io/badge/🤗-Paper%20In%20HF-red.svg)](tps://huggingface.co/papers/2411.19108)
+[![arXiv](https://img.shields.io/badge/Arxiv-2411.19108-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2411.19108) 
+[![Home Page](https://img.shields.io/badge/Project-<Website>-blue.svg)](https://liewfeng.github.io/TeaCache/) 
+[![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](./LICENSE) 
+[![github](https://img.shields.io/github/stars/LiewFeng/TeaCache.svg?style=social)](https://github.com/LiewFeng/TeaCache/)
+
+</h5>
+
+
 
 ![visualization](./assets/tisser.png)
 
 ## Latest News 🔥
-- [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID).
+- [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks [@SHYuanBest](https://github.com/SHYuanBest).
 - [2024/12/24] 🔥 Support [HunyuanVideo](https://github.com/Tencent/HunyuanVideo).
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
 - [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) of TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
 - [2024/11/28] 🎉 Release the [paper](https://arxiv.org/abs/2411.19108) of TeaCache.
 
 ## Introduction
-We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps. For more details and visual results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
+We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps, thereby accelerating the inference. For more details and visual results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
 
 ## TeaCache for HunyuanVideo
 Please refer to [TeaCache4HunyuanVideo](./TeaCache4HunyuanVideo/README.md).
@@ -125,6 +134,15 @@ python vbench/cal_vbench.py --score_dir bbb
 # generated video is our methods's results
 python common_metrics/eval.py --gt_video_dir aa --generated_video_dir bb
 ```
+## Acknowledgement
+
+This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan), [Latte](https://github.com/Vchitect/Latte), [CogVideoX](https://github.com/THUDM/CogVideo), [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) and [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks for their contributions!
+
+## License
+
+* The majority of this project is released under the Apache 2.0 license as found in the [LICENSE](./LICENSE) file.
+* For [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan), [Latte](https://github.com/Vchitect/Latte), [CogVideoX](https://github.com/THUDM/CogVideo), [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) and [ConsisID](https://github.com/PKU-YuanGroup/ConsisID), please follow thier LICENSE.
+* The service is a research preview. Please contact us if you find any potential violations. (liufeng20@mails.ucas.ac.cn)
 
 ## Citation
 If you find TeaCache is useful in your research or applications, please consider giving us a star 🌟 and citing it by the following BibTeX entry.
@@ -138,6 +156,4 @@ If you find TeaCache is useful in your research or applications, please consider
 }
 ```
 
-## Acknowledgement
 
-This repository is built based on [VideoSys](https://github.com/NUS-HPC-AI-Lab/VideoSys), [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan), [Latte](https://github.com/Vchitect/Latte), [CogVideoX](https://github.com/THUDM/CogVideo), [HunyuanVideo](https://github.com/Tencent/HunyuanVideo) and [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks for their contributions!
