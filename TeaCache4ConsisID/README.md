@@ -31,7 +31,7 @@ python3 teacache_sample_video.py \
     --output_path ./teacache_results
 ```
 
-To generate a video with 8 GPUs, you can use the following [here](https://github.com/PKU-YuanGroup/ConsisID/tree/main/tools).
+To generate a video with 8 GPUs, you can following [here](https://github.com/PKU-YuanGroup/ConsisID/tree/main/tools).
 
 ## Resources
 
