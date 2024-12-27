@@ -63,6 +63,7 @@
 ![visualization](./assets/tisser.png)
 
 ## Latest News 🔥
+- **TeaCache4FLUX will be released in a few days. Please star ⭐ our project and stay tuned. Welcome for PRs to support other models.**
 - [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks [@SHYuanBest](https://github.com/SHYuanBest).
 - [2024/12/24] 🔥 Support [HunyuanVideo](https://github.com/Tencent/HunyuanVideo).
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
