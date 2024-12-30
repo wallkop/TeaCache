@@ -96,7 +96,7 @@ Please refer to [TeaCache4LTX-Video](./TeaCache4LTX-Video/README.md).
 
 ## TeaCache for LuminaT2X
 
-Please refer to [TeaCache4LuminaT2X](./TeaCache4LuminaT2X/README.md).
+Please refer to [TeaCache4Lumina-T2X](./TeaCache4Lumina-T2X/README.md).
 
 ## Installation
 
