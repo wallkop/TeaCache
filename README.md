@@ -94,7 +94,7 @@ Please refer to [TeaCache4Mochi](./TeaCache4Mochi/README.md).
 
 Please refer to [TeaCache4LTX-Video](./TeaCache4LTX-Video/README.md).
 
-## TeaCache for LuminaT2X
+## TeaCache for Lumina-T2X
 
 Please refer to [TeaCache4Lumina-T2X](./TeaCache4Lumina-T2X/README.md).
 
