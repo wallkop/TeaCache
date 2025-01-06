@@ -64,9 +64,10 @@
 
 ## Latest News 🔥
 - **Welcome for PRs to support other models. Please star ⭐ our project and stay tuned.**
+- [2025/01/06] 🔥 [ComfyUI-HunyuanVideoWrapper](https://github.com/kijai/ComfyUI-HunyuanVideoWrapper) supports TeaCache. Thanks [@kijai](https://github.com/kijai), [ctf05](https://github.com/ctf05) and [DarioFT](https://github.com/DarioFT).
 - [2024/12/30] 🔥 Support [Mochi](https://github.com/genmoai/mochi) and [LTX-Video](https://github.com/Lightricks/LTX-Video) for Video Diffusion Models. Support [Lumina-T2X](https://github.com/Alpha-VLLM/Lumina-T2X) for Image Diffusion Models.
 - [2024/12/27] 🔥 Support [FLUX](https://github.com/black-forest-labs/flux). TeaCache works well for Image Diffusion Models!
-- [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks [@SHYuanBest](https://github.com/SHYuanBest). TeaCache can be easily adapted to models based on CogvideoX.
+- [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks [@SHYuanBest](https://github.com/SHYuanBest). Rescaling coefficients for CogVideoX can be directly applied to ConsisID.
 - [2024/12/24] 🔥 Support [HunyuanVideo](https://github.com/Tencent/HunyuanVideo).
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
 - [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) of TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
