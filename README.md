@@ -62,9 +62,8 @@
 ![visualization](./assets/tisser.png)
 
 ## Latest News 🔥
-- **Welcome for PRs to support other models. Please star ⭐ our project and stay tuned.**
+**Welcome for PRs to support other models. Please star ⭐ our project and stay tuned.**
 - [2025/01/07] 🔥 Support [TangoFlux](https://github.com/declare-lab/TangoFlux). TeaCache works well for Audio Diffusion Models! Rescaling coefficients for FLUX can be directly applied to TangoFLUX.
-- [2025/01/06] 🔥 [ComfyUI-HunyuanVideoWrapper](https://github.com/kijai/ComfyUI-HunyuanVideoWrapper) supports TeaCache. Thanks [@kijai](https://github.com/kijai), [ctf05](https://github.com/ctf05) and [DarioFT](https://github.com/DarioFT).
 - [2024/12/30] 🔥 Support [Mochi](https://github.com/genmoai/mochi) and [LTX-Video](https://github.com/Lightricks/LTX-Video) for Video Diffusion Models. Support [Lumina-T2X](https://github.com/Alpha-VLLM/Lumina-T2X) for Image Diffusion Models.
 - [2024/12/27] 🔥 Support [FLUX](https://github.com/black-forest-labs/flux). TeaCache works well for Image Diffusion Models!
 - [2024/12/26] 🔥 Support [ConsisID](https://github.com/PKU-YuanGroup/ConsisID). Thanks [@SHYuanBest](https://github.com/SHYuanBest). Rescaling coefficients for CogVideoX can be directly applied to ConsisID.
@@ -72,6 +71,11 @@
 - [2024/12/19] 🔥 Support [CogVideoX](https://github.com/THUDM/CogVideo).
 - [2024/12/06] 🎉 Release the [code](https://github.com/LiewFeng/TeaCache) of TeaCache. Support [Open-Sora](https://github.com/hpcaitech/Open-Sora), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan) and [Latte](https://github.com/Vchitect/Latte).
 - [2024/11/28] 🎉 Release the [paper](https://arxiv.org/abs/2411.19108) of TeaCache.
+
+## Community Contributions 🧩 
+If you develop/use TeaCache in your projects, welcome to let us know.
+- [ComfyUI-HunyuanVideoWrapper](https://github.com/kijai/ComfyUI-HunyuanVideoWrapper) supports TeaCache4HunyuanVideo. Thanks [@kijai](https://github.com/kijai), [ctf05](https://github.com/ctf05) and [DarioFT](https://github.com/DarioFT).
+- [ComfyUI-TeaCacheHunyuanVideo](https://github.com/facok/ComfyUI-TeaCacheHunyuanVideo) for TeaCache4HunyuanVideo. Thanks [@facok](https://github.com/facok). 
 
 ## Introduction
 We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps, thereby accelerating the inference. For more details and visual results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
