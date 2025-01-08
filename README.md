@@ -61,6 +61,9 @@
 
 ![visualization](./assets/tisser.png)
 
+## Introduction
+We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps, thereby accelerating the inference. TeaCache works well for Video Diffusion Models, Image Diffusion models and Audio Diffusion Models. For more details and results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
+
 ## Latest News 🔥
 **Welcome for PRs to support other models. Please star ⭐ our project and stay tuned.**
 - [2025/01/07] 🔥 Support [TangoFlux](https://github.com/declare-lab/TangoFlux). TeaCache works well for Audio Diffusion Models! Rescaling coefficients for FLUX can be directly applied to TangoFLUX.
@@ -77,34 +80,25 @@ If you develop/use TeaCache in your projects, welcome to let us know.
 - [ComfyUI-HunyuanVideoWrapper](https://github.com/kijai/ComfyUI-HunyuanVideoWrapper) supports TeaCache4HunyuanVideo. Thanks [@kijai](https://github.com/kijai), [ctf05](https://github.com/ctf05) and [DarioFT](https://github.com/DarioFT).
 - [ComfyUI-TeaCacheHunyuanVideo](https://github.com/facok/ComfyUI-TeaCacheHunyuanVideo) for TeaCache4HunyuanVideo. Thanks [@facok](https://github.com/facok). 
 
-## Introduction
-We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching approach that estimates and leverages the fluctuating differences among model outputs across timesteps, thereby accelerating the inference. For more details and visual results, please visit our [project page](https://github.com/LiewFeng/TeaCache).
-
 ## TeaCache for HunyuanVideo
 Please refer to [TeaCache4HunyuanVideo](./TeaCache4HunyuanVideo/README.md).
 
 ## TeaCache for ConsisID
-
 Please refer to [TeaCache4ConsisID](./TeaCache4ConsisID/README.md).
 
 ## TeaCache for FLUX
-
 Please refer to [TeaCache4FLUX](./TeaCache4FLUX/README.md).
 
 ## TeaCache for Mochi
-
 Please refer to [TeaCache4Mochi](./TeaCache4Mochi/README.md).
 
 ## TeaCache for LTX-Video
-
 Please refer to [TeaCache4LTX-Video](./TeaCache4LTX-Video/README.md).
 
 ## TeaCache for Lumina-T2X
-
 Please refer to [TeaCache4Lumina-T2X](./TeaCache4Lumina-T2X/README.md).
 
 ## TeaCache for TangoFlux
-
 Please refer to [TeaCache4TangoFlux](./TeaCache4TangoFlux/README.md).
 
 ## Installation
