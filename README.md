@@ -77,6 +77,7 @@ We introduce Timestep Embedding Aware Cache (TeaCache), a training-free caching 
 
 ## Community Contributions 🧩 
 If you develop/use TeaCache in your projects, welcome to let us know.
+- [ConsisID](https://github.com/PKU-YuanGroup/ConsisID) supports TeaCache. Thanks [@SHYuanBest](https://github.com/SHYuanBest).
 - [ComfyUI-HunyuanVideoWrapper](https://github.com/kijai/ComfyUI-HunyuanVideoWrapper) supports TeaCache4HunyuanVideo. Thanks [@kijai](https://github.com/kijai), [ctf05](https://github.com/ctf05) and [DarioFT](https://github.com/DarioFT).
 - [ComfyUI-TeaCacheHunyuanVideo](https://github.com/facok/ComfyUI-TeaCacheHunyuanVideo) for TeaCache4HunyuanVideo. Thanks [@facok](https://github.com/facok). 
 
